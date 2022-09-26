@@ -1,31 +1,4 @@
-<template>
-  <glassPane text="Alan Way"></glassPane>
-  <!-- <shard-canvas
-    :canvas_no = "1"
-    canvas_id = "back_blast"
-    :shard_cnt = 7
-    :shard_size = 35
-  /> -->
-</template>
-
-<script>
-import HelloWorld from './components/HelloWorld.vue'
-import glassPane from './components/glassPane.vue'
-import shardCanvas from './components/shardCanvas.vue'
-
-export default {
-  name: 'App',
-  components: {
-    HelloWorld,
-    glassPane,
-    shardCanvas
-  }
-}
-</script>
-
-
-<style lang="scss">
-  :root {
+:root {
     --matrix-grey: #272727;
     // --matrix-grey: #343434;
     --sunken-grey: #141414;
@@ -91,20 +64,3 @@ export default {
       -400% 500%
     );
   }
-
-  body {
-    background-color: #434343;
-    margin: 0;
-  }
-
-  // https://stackoverflow.com/questions/826782/how-to-disable-text-selection-highlighting
-  .noselect {
-    -webkit-touch-callout: none; /* iOS Safari */
-      -webkit-user-select: none; /* Safari */
-       -khtml-user-select: none; /* Konqueror HTML */
-         -moz-user-select: none; /* Old versions of Firefox */
-          -ms-user-select: none; /* Internet Explorer/Edge */
-              user-select: none; /* Non-prefixed version, currently
-                                    supported by Chrome, Edge, Opera and Firefox */
-  }
-</style>
