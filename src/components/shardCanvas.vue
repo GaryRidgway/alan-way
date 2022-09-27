@@ -9,7 +9,8 @@
             canvas_no: Number,
             canvas_id: String,
             shard_cnt: Number,
-            shard_size: Number
+            shard_size: Number,
+            plays_audio: Boolean
 
         },
         data() {
@@ -23,7 +24,6 @@
             let style_rules = getComputedStyle(document.body);
             let props = this.$props;
             let glass_color = style_rules.getPropertyValue("--clear-glass-light");
-            let shardSize = 35;
             let chaffSize = 3;
             let chaffMultiplier = 3.5;
             let variance = 20;
@@ -34,8 +34,8 @@
             let g_acceleration = 0.6;
             let maxVelocity = 9.8;
             let crack_offset = {
-            x: -8,
-            y: -9
+                x: -8,
+                y: -9
             };
             let canvas_dims = {
                 x: 400,
@@ -55,28 +55,67 @@
                 let canvas_data_shard_cnt = props.shard_cnt;
                 let canvas_data_shard_size = props.shard_size;
                 let fill_c = sketch.color(glass_color);
+                let plays_audio = props.plays_audio;
+                let canvasElement;
+                let distFromTop = 0;
+                let lowerBound = canvas_dims.y;
+
+                // We use both these variables to make sure the audio plays
+                let groundAudioTriggers = 0;
+                let groundAudioHasPlayed = false;
+                
+                sketch.clicks = 0;
+                sketch.triggerMakeShards = false;
 
                 sketch.setup = function () {
                     let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
                     glassCanvas.id(canvas_data_id);
                     glassCanvas.parent(canvas_data_parent);
+                    canvasElement = document.querySelector("#" + canvas_data_parent + " .canvas");
                 };
 
                 sketch.draw = function () {
+                    if (sketch.triggerMakeShards) {
+                        sketch.makeShards()
+                        sketch.triggerMakeShards = false;
+                    }
+
+                    if(groundAudioTriggers > 0 && groundAudioHasPlayed != true && plays_audio) {
+                        // Make sure the user has clicked the dom and is intending to interact with the element that makes this sound.
+                        if (sketch.clicks > 0) {
+                            let groundHit = new Audio(
+                                "src/assets/audio/GlassGroundHit.mp3"
+                            );
+                            groundHit.volume = 0.2;
+                            groundHit.play();
+                        }
+
+                        groundAudioHasPlayed = true;
+                    }
+
                     sketch.clear();
                     sketch.fill(fill_c);
                     sketch.strokeWeight(1);
                     sketch.stroke(sketch.color("rgba(255,255,255,0.8)"));
-                    if (canvasShards) {
-                        canvasShards.forEach(function (element, SHindex) {
+                    if (canvasShards.length > 0) {
+
+                        // We invert the array to stop jittering.
+                        canvasShards.reverse().forEach(function (element, SHindex) {
                             if (element.deletable) {
                                 canvasShards.splice(SHindex, 1);
+
+                                // On the first deletion, trigger the ground hit audio to play.
+                                groundAudioTriggers++;
                             }
-                            element.update();
+                        });
+
+                        canvasShards.forEach(function (element, SHindex) {
+                            element.update(lowerBound);
                             element.display(sketch);
                         });
                     }
                     else {
+
                         // When we dont need to draw, we should end the loop.
                         // https://p5js.org/reference/#/p5/loop
                         sketch.noLoop();
@@ -84,9 +123,24 @@
                 };
 
                 sketch.makeShards = function () {
+                    // Reset the ground audio play var so we can hear the ground audio again.
+                    groundAudioTriggers = 0;
+                    groundAudioHasPlayed = false;
+
+                    // Preliminary lower bound for the canvas.
+                    canvasElement = document.querySelector("#" + canvas_data_parent + " canvas");
+                    distFromTop = window.pageYOffset + canvasElement.getBoundingClientRect().top;
+                    lowerBound = window.innerHeight - distFromTop + props.shard_size;
+
+                    // if the lower bound is greater than the canvas has height...
+                    if (lowerBound > canvas_dims.y) {
+                        lowerBound = canvas_dims.y + props.shard_size;
+                    }
+
                     canvasShards = shardsCreate(
                         canvas_data_shard_cnt,
-                        canvas_data_shard_size
+                        canvas_data_shard_size,
+                        lowerBound
                     );
                 };
             };
@@ -94,24 +148,30 @@
             // Set up the canvases.
             this.canvasedSketch = new p5(newSketch);
 
-            function shardsCreate(shard_cnt, shard_size) {
-            let shards = [];
+            function shardsCreate(shard_cnt, shard_size, lowerBound) {
+                let shards = [];
                 for (let i = 0; i < shard_cnt; i++) {
                     let ranposX = Math.floor(Math.random() * 50) - 25;
                     let ranposY = Math.floor(Math.random() * 50) - 50;
                     shards.push(
-                    new Shard(
-                        canvas_dims.x / 2 + ranposX - 10,
-                        canvas_offset + ranposY,
-                        shard_size
-                    )
+                        new Shard(
+                            canvas_dims.x / 2 + ranposX - 10,
+                            canvas_offset + ranposY,
+                            shard_size,
+                            lowerBound
+                        )
                     );
                 }
                 for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
                     let ranposX = Math.floor(Math.random() * 50) - 25;
                     let ranposY = Math.floor(Math.random() * 50) - 50;
                     shards.push(
-                        new Shard(canvas_dims.x / 2 + ranposX - 10, canvas_offset + ranposY, null)
+                        new Shard(
+                            canvas_dims.x / 2 + ranposX - 10,
+                            canvas_offset + ranposY,
+                            null,
+                            lowerBound
+                        )
                     );
                 }
 
@@ -120,7 +180,7 @@
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size) {
+            function Shard(iPosX, iPosY, size, lowerBound) {
                 // Variables.
                 this.pos = {
                     x: iPosX,
@@ -131,6 +191,8 @@
                 if (size !== null && size > chaffSize) {
                     this.chaff = false;
                 }
+
+                this.lowerBound = lowerBound
 
                 // Maximum rotation speed.
                 // this.MR_speed = 3;
@@ -147,19 +209,19 @@
                 this.vertices_cnt = Math.floor(Math.random() * 3) + 3;
                 if (this.chaff === true) {
                     this.vertices = sortPoints(
-                    randomPoints(this.vertices_cnt, chaffSize, chaffSize),
-                    chaffSize,
-                    chaffSize
+                        randomPoints(this.vertices_cnt, chaffSize, chaffSize),
+                        chaffSize,
+                        chaffSize
                     );
                 } else {
                     this.vertices = sortPoints(
-                    randomPoints(
-                        this.vertices_cnt,
-                        shardSize + this.shard_variance,
-                        shardSize + this.shard_variance
-                    ),
-                    shardSize,
-                    shardSize
+                        randomPoints(
+                            this.vertices_cnt,
+                            props.shard_size + this.shard_variance,
+                            props.shard_size + this.shard_variance
+                        ),
+                        props.shard_size,
+                        props.shard_size
                     );
                 }
                 this.horizontalVelocity = Math.random() * MPH_velocity - MPH_velocity / 2;
@@ -178,7 +240,7 @@
                         y: this.pos.y + this.verticalVelocity
                     };
 
-                    if (this.pos.y > canvas_dims.y) {
+                    if (this.pos.y > this.lowerBound) {
                         this.deletable = true;
                     }
                 };
@@ -246,9 +308,10 @@
 
         },
         methods: {
-            makeShards() {
+            makeShards(clicks) {
+                this.canvasedSketch.triggerMakeShards = true;
+                this.canvasedSketch.clicks = clicks;
                 this.canvasedSketch.loop();
-                this.canvasedSketch.makeShards();
             }
         }
     }

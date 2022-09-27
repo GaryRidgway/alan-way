@@ -6,6 +6,7 @@
             canvas_id = "back_blast"
             :shard_cnt = 7
             :shard_size = 35
+            :plays_audio = true
         />
       <div class="pane-clip-brace">
         <div class="shadow-pane">
@@ -53,6 +54,7 @@
             canvas_id = "front_blast"
             :shard_cnt = 7
             :shard_size = 3
+            :plays_audio = false
         />
       <div id="tamp">
         <div class="tamp--positioner">
@@ -114,7 +116,7 @@
                 // https://pixabay.com/sound-effects/glass-bottle-shatter-13847/
                 // https://stackoverflow.com/questions/9419263/how-to-play-audio
                 let audio = new Audio(
-                    "https://cdn.pixabay.com/download/audio/2022/01/09/audio_f56aa6c920.mp3?filename=glass-bottle-shatter-13847.mp3"
+                    "src/assets/audio/GlassCrack.mp3"
                 );
                 audio.volume = 0.4;
                 audio.play();
@@ -210,7 +212,7 @@
 
                     if (Object.keys(refs)[Cindex]) {
                         // console.log(refs[Object.keys(refs)[Cindex]])
-                        refs[Object.keys(refs)[Cindex]].makeShards();
+                        refs[Object.keys(refs)[Cindex]].makeShards(clicks);
                     }
                 });
 
