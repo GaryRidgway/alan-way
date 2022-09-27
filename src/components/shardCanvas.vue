@@ -14,7 +14,7 @@
         },
         data() {
             return {
-                canvasedSketch : "boo",
+                canvasedSketch : "",
             }
         },
         mounted() {
@@ -23,8 +23,6 @@
             let style_rules = getComputedStyle(document.body);
             let props = this.$props;
             let glass_color = style_rules.getPropertyValue("--clear-glass-light");
-            let shard_cnt = 7;
-            let shards = [];
             let shardSize = 35;
             let chaffSize = 3;
             let chaffMultiplier = 3.5;
@@ -44,8 +42,6 @@
                 y: 1000
             };
             let canvas_offset = 100;
-            let canvasP5sketches = [];
-            let canvasP5s = [];
             let canvasShards = [];
 
             // Example for creating multiple p5 canvases.
@@ -53,55 +49,45 @@
 
             p5.disableFriendlyErrors = true;
 
-            let canvasData = [
-            {
-                id: "back_blast",
-                parent: "glassCanvas-1",
-                shard_cnt: 7,
-                shard_size: 35
-            },
-            {
-                id: "front_blast",
-                parent: "glassCanvas-2",
-                shard_cnt: 4,
-                shard_size: 3
-            }
-            ];
-
             let newSketch = function (sketch) {
                 let canvas_data_id = props.canvas_id;
                 let canvas_data_parent = 'glassCanvas-' + props.canvas_no;
                 let canvas_data_shard_cnt = props.shard_cnt;
                 let canvas_data_shard_size = props.shard_size;
+                let fill_c = sketch.color(glass_color);
 
                 sketch.setup = function () {
-                let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
-                glassCanvas.id(canvas_data_id);
-                glassCanvas.parent(canvas_data_parent);
+                    let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
+                    glassCanvas.id(canvas_data_id);
+                    glassCanvas.parent(canvas_data_parent);
                 };
 
                 sketch.draw = function () {
-                sketch.clear();
-                let fill_c = sketch.color(glass_color);
-                sketch.fill(fill_c);
-                sketch.strokeWeight(1);
-                sketch.stroke(sketch.color("rgba(255,255,255,0.8)"));
-                if (canvasShards) {
-                    canvasShards.forEach(function (element, SHindex) {
-                    if (element.deletable) {
-                        canvasShards.splice(SHindex, 1);
+                    sketch.clear();
+                    sketch.fill(fill_c);
+                    sketch.strokeWeight(1);
+                    sketch.stroke(sketch.color("rgba(255,255,255,0.8)"));
+                    if (canvasShards) {
+                        canvasShards.forEach(function (element, SHindex) {
+                            if (element.deletable) {
+                                canvasShards.splice(SHindex, 1);
+                            }
+                            element.update();
+                            element.display(sketch);
+                        });
                     }
-                    element.update();
-                    element.display(sketch);
-                    });
-                }
+                    else {
+                        // When we dont need to draw, we should end the loop.
+                        // https://p5js.org/reference/#/p5/loop
+                        sketch.noLoop();
+                    }
                 };
 
                 sketch.makeShards = function () {
-                canvasShards = shardsCreate(
-                    canvas_data_shard_cnt,
-                    canvas_data_shard_size
-                );
+                    canvasShards = shardsCreate(
+                        canvas_data_shard_cnt,
+                        canvas_data_shard_size
+                    );
                 };
             };
 
@@ -110,127 +96,124 @@
 
             function shardsCreate(shard_cnt, shard_size) {
             let shards = [];
-            for (let i = 0; i < shard_cnt; i++) {
-                let ranposX = Math.floor(Math.random() * 50) - 25;
-                let ranposY = Math.floor(Math.random() * 50) - 50;
-                shards.push(
-                new Shard(
-                    canvas_dims.x / 2 + ranposX - 10,
-                    canvas_offset + ranposY,
-                    shard_size
-                )
-                );
-            }
-            for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
-                let ranposX = Math.floor(Math.random() * 50) - 25;
-                let ranposY = Math.floor(Math.random() * 50) - 50;
-                shards.push(
-                new Shard(canvas_dims.x / 2 + ranposX - 10, canvas_offset + ranposY, null)
-                );
-            }
+                for (let i = 0; i < shard_cnt; i++) {
+                    let ranposX = Math.floor(Math.random() * 50) - 25;
+                    let ranposY = Math.floor(Math.random() * 50) - 50;
+                    shards.push(
+                    new Shard(
+                        canvas_dims.x / 2 + ranposX - 10,
+                        canvas_offset + ranposY,
+                        shard_size
+                    )
+                    );
+                }
+                for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
+                    let ranposX = Math.floor(Math.random() * 50) - 25;
+                    let ranposY = Math.floor(Math.random() * 50) - 50;
+                    shards.push(
+                        new Shard(canvas_dims.x / 2 + ranposX - 10, canvas_offset + ranposY, null)
+                    );
+                }
 
-            return shards;
+                return shards;
             }
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
             function Shard(iPosX, iPosY, size) {
-            // Variables.
-            this.pos = {
-                x: iPosX,
-                y: iPosY
-            };
-
-            this.chaff = true;
-            if (size !== null && size > chaffSize) {
-                this.chaff = false;
-            }
-
-            // Maximum rotation speed.
-            this.MR_speed = 3;
-            // Rotation per frame.
-            this.rpf =
-                Math.floor(Math.random() * (this.MR_speed * 2 + 1)) - this.MR_speed;
-            // Current rotation.
-            this.rotation = 0;
-            this.deletable = false;
-
-            this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
-
-            // https://www.w3schools.com/js/js_random.asp
-            this.vertices_cnt = Math.floor(Math.random() * 3) + 3;
-            if (this.chaff === true) {
-                this.vertices = sortPoints(
-                randomPoints(this.vertices_cnt, chaffSize, chaffSize),
-                chaffSize,
-                chaffSize
-                );
-            } else {
-                this.vertices = sortPoints(
-                randomPoints(
-                    this.vertices_cnt,
-                    shardSize + this.shard_variance,
-                    shardSize + this.shard_variance
-                ),
-                shardSize,
-                shardSize
-                );
-            }
-            this.horizontalVelocity = Math.random() * MPH_velocity - MPH_velocity / 2;
-            this.verticalVelocity = Math.random() * MPV_velocity - MPV_velocity / 2;
-
-            // Functions.
-            this.update = function () {
-                this.verticalVelocity += g_acceleration;
-                if (this.verticalVelocity >= maxVelocity) {
-                this.verticalVelocity = maxVelocity;
-                }
-                this.rotation += this.rpf;
-
+                // Variables.
                 this.pos = {
-                x: this.pos.x + this.horizontalVelocity,
-                y: this.pos.y + this.verticalVelocity
+                    x: iPosX,
+                    y: iPosY
                 };
 
-                if (this.pos.y > canvas_dims.y) {
-                this.deletable = true;
+                this.chaff = true;
+                if (size !== null && size > chaffSize) {
+                    this.chaff = false;
                 }
-            };
 
-            this.display = function (sketch) {
-                // if (this.chaff) {
-                //   return;
-                // }
-                this.shard_adj_size = shardSize;
-                if (this.chaff) {
-                this.shard_adj_size = chaffSize;
+                // Maximum rotation speed.
+                // this.MR_speed = 3;
+                // Rotation per frame.
+                // this.rpf =
+                //     Math.floor(Math.random() * (this.MR_speed * 2 + 1)) - this.MR_speed;
+                // Current rotation.
+                // this.rotation = 0;
+                this.deletable = false;
+
+                this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
+
+                // https://www.w3schools.com/js/js_random.asp
+                this.vertices_cnt = Math.floor(Math.random() * 3) + 3;
+                if (this.chaff === true) {
+                    this.vertices = sortPoints(
+                    randomPoints(this.vertices_cnt, chaffSize, chaffSize),
+                    chaffSize,
+                    chaffSize
+                    );
+                } else {
+                    this.vertices = sortPoints(
+                    randomPoints(
+                        this.vertices_cnt,
+                        shardSize + this.shard_variance,
+                        shardSize + this.shard_variance
+                    ),
+                    shardSize,
+                    shardSize
+                    );
                 }
-                sketch.push();
+                this.horizontalVelocity = Math.random() * MPH_velocity - MPH_velocity / 2;
+                this.verticalVelocity = Math.random() * MPV_velocity - MPV_velocity / 2;
 
-                // DEBUG::SHOWS OFFSET CENTER.
-                // sketch.circle(
-                //   canvas_dims.x / 2 + crack_offset.x,
-                //   canvas_offset + crack_offset.y,
-                //   10
-                // );
+                // Functions.
+                this.update = function () {
+                    this.verticalVelocity += g_acceleration;
+                    if (this.verticalVelocity >= maxVelocity) {
+                    this.verticalVelocity = maxVelocity;
+                    }
+                    // this.rotation += this.rpf;
 
-                sketch.angleMode(sketch.DEGREES);
-                sketch.translate(
-                this.vertices[1][0] + this.pos.x + crack_offset.x,
-                this.vertices[1][1] + this.pos.y + crack_offset.y
-                );
+                    this.pos = {
+                        x: this.pos.x + this.horizontalVelocity,
+                        y: this.pos.y + this.verticalVelocity
+                    };
 
-                // DEBUG::SHOWS ROTATION CENTER.
-                // circle(0, 0, 10);
-                sketch.rotate(this.rotation);
-                sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
-                sketch.beginShape();
-                for (let i = 0; i < this.vertices[0].length; i++) {
-                sketch.vertex(this.vertices[0][i][0], this.vertices[0][i][1]);
-                }
-                sketch.endShape(sketch.CLOSE);
-                sketch.pop();
-            };
+                    if (this.pos.y > canvas_dims.y) {
+                        this.deletable = true;
+                    }
+                };
+
+                this.display = function (sketch) {
+                    // if (this.chaff) {
+                    //   return;
+                    // }
+
+                    sketch.push();
+
+                    // DEBUG::SHOWS OFFSET CENTER.
+                    // sketch.circle(
+                    //   canvas_dims.x / 2 + crack_offset.x,
+                    //   canvas_offset + crack_offset.y,
+                    //   10
+                    // );
+
+                    // sketch.angleMode(sketch.DEGREES);
+                    sketch.translate(
+                        this.vertices[1][0] + this.pos.x + crack_offset.x,
+                        this.vertices[1][1] + this.pos.y + crack_offset.y
+                    );
+
+                    // DEBUG::SHOWS ROTATION CENTER.
+                    // circle(0, 0, 10);
+                    // sketch.rotate(this.rotation);
+                    sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
+                    sketch.beginShape();
+                    for (let i = 0; i < this.vertices[0].length; i++) {
+                        sketch.vertex(this.vertices[0][i][0], this.vertices[0][i][1]);
+                    }
+                    sketch.endShape(sketch.CLOSE);
+                    sketch.pop();
+                };
             }
 
             // BIG props.
@@ -264,6 +247,7 @@
         },
         methods: {
             makeShards() {
+                this.canvasedSketch.loop();
                 this.canvasedSketch.makeShards();
             }
         }

@@ -1,11 +1,5 @@
 <template>
   <glassPane text="Alan Way"></glassPane>
-  <!-- <shard-canvas
-    :canvas_no = "1"
-    canvas_id = "back_blast"
-    :shard_cnt = 7
-    :shard_size = 35
-  /> -->
 </template>
 
 <script>
