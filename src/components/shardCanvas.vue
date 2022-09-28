@@ -162,6 +162,7 @@
             function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null) {
                 let shards = [];
                 if (customShards !== null) {
+                    console.log(shardsClipAxisOffset);
                     for (let i = 0; i < customShards.length; i++) {
                     // for (let i = 0; i < 1; i++) {
                         let adjShard = [];
@@ -363,6 +364,13 @@
                                 let slope = (lrvV[1] - vertex[1]) / (lrvV[0] - vertex[0]);
                                 let intercept = vertex[1] - (slope * vertex[0]);
                                 let x = (tPoint - yOffset - intercept) / slope;
+
+                                console.log('____________________');
+                                console.log('lrvV    : ' + lrvV[1]);
+                                console.log('yOffset : ' + yOffset);
+                                console.log('tPoint  : ' + tPoint );
+                                console.log('tPoint - yOffset  : ' + (tPoint - yOffset) );
+                                console.log('____________________');
 
                                 newPoly.push([x, tPoint - yOffset]);
                             }
