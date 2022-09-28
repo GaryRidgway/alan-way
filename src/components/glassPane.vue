@@ -20,11 +20,9 @@
         </div>
         <div class="glass-pane">
           <div class="positioning-pixel">
-
             <div class="clip-brace">
               <div class="nameplate-positioner">
                 <div class="nameplate">
-
                   <div class="wave-fade-pane"></div>
                   <h1 id="portfolio-name" class="modern">
                     <div class="underlay"></div>
@@ -115,8 +113,13 @@
 
                 // https://pixabay.com/sound-effects/glass-bottle-shatter-13847/
                 // https://stackoverflow.com/questions/9419263/how-to-play-audio
+                let audioFile = "GlassCrack.mp3";
+                if (Math.floor(Math.random() * 100) === 0) {
+                    console.log("WE ZERO");
+                    audioFile = "Poof.mp3";
+                }
                 let audio = new Audio(
-                    "src/assets/audio/GlassCrack.mp3"
+                    "src/assets/audio/" + audioFile
                 );
                 audio.volume = 0.4;
                 audio.play();
