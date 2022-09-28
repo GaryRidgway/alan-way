@@ -10,7 +10,8 @@
             canvas_id: String,
             shard_cnt: Number,
             shard_size: Number,
-            plays_audio: Boolean
+            plays_audio: Boolean,
+            use_custom_shards: Boolean
 
         },
         data() {
@@ -58,6 +59,8 @@
                 let plays_audio = props.plays_audio;
                 let canvasElement;
                 let distFromTop = 0;
+                // Programatically get this some day.
+                let glassHeight = 136
                 let lowerBound = canvas_dims.y;
 
                 // We use both these variables to make sure the audio plays
@@ -66,6 +69,8 @@
                 
                 sketch.clicks = 0;
                 sketch.triggerMakeShards = false;
+                sketch.mouseYPos = 0;
+                sketch.clipAxisOffset = 189;
 
                 sketch.setup = function () {
                     let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
@@ -97,7 +102,7 @@
                     sketch.clear();
                     sketch.fill(fill_c);
                     sketch.strokeWeight(1);
-                    sketch.stroke(sketch.color("rgba(255,255,255,0.8)"));
+                    sketch.stroke(sketch.color("rgba(255,255,255,0.5)"));
                     if (canvasShards.length > 0) {
 
                         // We invert the array to stop jittering.
@@ -138,23 +143,27 @@
                         lowerBound = canvas_dims.y + props.shard_size;
                     }
 
+                    let determinativeCustomShards   = props.use_custom_shards ? myCustomVertices : null;
+                    let determinativeClipAxisOffset = props.use_custom_shards ? sketch.clipAxisOffset + sketch.mouseYPos : null;
+
                     canvasShards = shardsCreate(
                         canvas_data_shard_cnt,
                         canvas_data_shard_size,
                         lowerBound,
-                        myCustomVertices
+                        determinativeCustomShards,
+                        determinativeClipAxisOffset
                     );
-                    console.log(canvasShards);
                 };
             };
 
             // Set up the canvases.
             this.canvasedSketch = new p5(newSketch);
 
-            function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null) {
+            function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null) {
                 let shards = [];
                 if (customShards !== null) {
                     for (let i = 0; i < customShards.length; i++) {
+                    // for (let i = 0; i < 1; i++) {
                         let adjShard = [];
                         let posX = customShards[i][0][0];
                         let posY = customShards[i][0][1];
@@ -164,14 +173,14 @@
                             adjShard[verticesIndex][1] = customShards[i][verticesIndex][1] - customShards[i][0][1];
                         });
                         
-                        console.log(posX);
                         shards.push(
                             new Shard(
                                 posX,
                                 posY,
-                                null,
+                                100,
                                 lowerBound,
-                                adjShard
+                                adjShard,
+                                shardsClipAxisOffset
                             )
                         );
                     }
@@ -202,20 +211,22 @@
                         );
                     }
                 }
-                console.log(shards[0]);
 
                 return shards;
             }
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null) {
+            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null) {
                 // Variables.
                 this.pos = {
                     x: iPosX,
                     y: iPosY
                 };
-                this.countDown = 100;
+                this.countDown = 3;
+                this.countDown = 1000;
+
+                this.hasCustomVertices = customVertices !== null ? true : false;
 
                 this.chaff = true;
                 if (size !== null && size > chaffSize) {
@@ -233,12 +244,12 @@
                 // this.rotation = 0;
                 this.deletable = false;
 
-                // this.vertices;
-
                 if (customVertices !== null) {
                     this.vertices = [];
-                    this.vertices[0] = customVertices;
-                    this.vertices[1] = [0, 0];
+
+                    // Truncate the polygon if it is too big for its position.
+                    this.vertices[0] = truncatePolygon(clipAxisOffset, true, customVertices, this.pos.y);
+                    this.vertices[1] = myCustomOffset;
                 }
                 else {
                     this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
@@ -255,11 +266,11 @@
                         this.vertices = sortPoints(
                             randomPoints(
                                 this.vertices_cnt,
-                                props.shard_size + this.shard_variance,
-                                props.shard_size + this.shard_variance
+                                size + this.shard_variance,
+                                size + this.shard_variance
                             ),
-                            props.shard_size,
-                            props.shard_size
+                            size,
+                            size
                         );
                     }
                 }
@@ -284,7 +295,7 @@
                             y: this.pos.y + this.verticalVelocity
                         };
 
-                        if (this.pos.y > this.lowerBound) {
+                        if (this.pos.y + this.vertices[1][1] > this.lowerBound) {
                             this.deletable = true;
                         }
                     }
@@ -313,8 +324,11 @@
                     // DEBUG::SHOWS ROTATION CENTER.
                     // circle(0, 0, 10);
                     // sketch.rotate(this.rotation);
-                    sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
+                    if (!this.hasCustomVertices) {
+                        sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
+                    }
                     // sketch.circle(0,0,100);
+
                     sketch.beginShape();
                     for (let i = 0; i < this.vertices[0].length; i++) {
                         sketch.vertex(this.vertices[0][i][0], this.vertices[0][i][1]);
@@ -322,6 +336,60 @@
                     sketch.endShape(sketch.CLOSE);
                     sketch.pop();
                 };
+            }
+
+            // Returns a new polygon that is truncated above or below (tAxis) a truncation point (tPoint).
+            // For clipAxis, false is above and true is below.
+            // FLIP ABOVE???
+            function truncatePolygon(tPoint, clipAxis, poly, yOffset) {
+                let newPoly = [];
+                poly.forEach(function(vertex, index) {
+
+                    let truncate = truncatable(tPoint, clipAxis, vertex[1] + yOffset);
+
+                    if (truncate) {
+                        // Intersect formula.
+                        // Left and right vertices.
+                        let lrv = [
+                            poly[(poly.length + index - 1) % poly.length],
+                            poly[(poly.length + index + 1) % poly.length]
+                        ];
+
+                        // For each line made with our vertex...
+                        lrv.forEach(function(lrvV) {
+                            // https://content.byui.edu/file/b8b83119-9acc-4a7b-bc84-efacf9043998/1/Math-2-11-2.html#WS1
+                            // Only add a new vertex for this if the lrvV is not going to be truncated.
+                            if (!truncatable(tPoint, clipAxis, lrvV[1] + yOffset)) {
+                                let slope = (lrvV[1] - vertex[1]) / (lrvV[0] - vertex[0]);
+                                let intercept = vertex[1] - (slope * vertex[0]);
+                                let x = (tPoint - yOffset - intercept) / slope;
+
+                                newPoly.push([x, tPoint - yOffset]);
+                            }
+                        });
+                    }
+                    else {
+                        newPoly.push(vertex);
+                    }
+                });
+
+                return newPoly;
+            }
+
+            function truncatable(tPoint, clipAxis, vertexY) {
+                let truncate = false;
+                if (clipAxis) {
+                    if(vertexY > tPoint) {
+                        truncate = true;
+                    }
+                }
+                else {
+                    if(vertexY < tPoint) {
+                        truncate = true;
+                    }
+                }
+
+                return truncate;
             }
 
             // BIG props.
@@ -354,13 +422,16 @@
 
         },
         methods: {
-            makeShards(clicks) {
+            makeShards(clicks, mouseYPos) {
+                this.canvasedSketch.mouseYPos = mouseYPos;
                 this.canvasedSketch.triggerMakeShards = true;
                 this.canvasedSketch.clicks = clicks;
                 this.canvasedSketch.loop();
             }
         }
     }
+
+    let myCustomOffset = [-165, -215];
 
     let myCustomVertices = [
         [ 

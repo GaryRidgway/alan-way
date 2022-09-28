@@ -5,8 +5,9 @@
             :canvas_no = "1"
             canvas_id = "back_blast"
             :shard_cnt = 7
-            :shard_size = 35
+            :shard_size = 100
             :plays_audio = true
+            :use_custom_shards = true
         />
       <div class="pane-clip-brace">
         <div class="shadow-pane">
@@ -46,14 +47,15 @@
         </div>
       </div>
       
-      <shard-canvas
+      <!-- <shard-canvas
             ref = "shard-canvas-2"
             :canvas_no = "2"
             canvas_id = "front_blast"
             :shard_cnt = 7
             :shard_size = 3
             :plays_audio = false
-        />
+            :use_custom_shards = false
+        /> -->
       <div id="tamp">
         <div class="tamp--positioner">
             <div class="circle-indicator circle-indicator-0">
@@ -214,7 +216,7 @@
 
                     if (Object.keys(refs)[Cindex]) {
                         // console.log(refs[Object.keys(refs)[Cindex]])
-                        refs[Object.keys(refs)[Cindex]].makeShards(clicks);
+                        refs[Object.keys(refs)[Cindex]].makeShards(clicks, y);
                     }
                 });
 
