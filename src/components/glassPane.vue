@@ -115,7 +115,6 @@
                 // https://stackoverflow.com/questions/9419263/how-to-play-audio
                 let audioFile = "GlassCrack.mp3";
                 if (Math.floor(Math.random() * 100) === 0) {
-                    console.log("WE ZERO");
                     audioFile = "Poof.mp3";
                 }
                 let audio = new Audio(
