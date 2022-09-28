@@ -79,6 +79,7 @@
                         sketch.makeShards()
                         sketch.triggerMakeShards = false;
                     }
+                    // return;
 
                     if(groundAudioTriggers > 0 && groundAudioHasPlayed != true && plays_audio) {
                         // Make sure the user has clicked the dom and is intending to interact with the element that makes this sound.
@@ -140,52 +141,81 @@
                     canvasShards = shardsCreate(
                         canvas_data_shard_cnt,
                         canvas_data_shard_size,
-                        lowerBound
+                        lowerBound,
+                        myCustomVertices
                     );
+                    console.log(canvasShards);
                 };
             };
 
             // Set up the canvases.
             this.canvasedSketch = new p5(newSketch);
 
-            function shardsCreate(shard_cnt, shard_size, lowerBound) {
+            function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null) {
                 let shards = [];
-                for (let i = 0; i < shard_cnt; i++) {
-                    let ranposX = Math.floor(Math.random() * 50) - 25;
-                    let ranposY = Math.floor(Math.random() * 50) - 50;
-                    shards.push(
-                        new Shard(
-                            canvas_dims.x / 2 + ranposX - 10,
-                            canvas_offset + ranposY,
-                            shard_size,
-                            lowerBound
-                        )
-                    );
+                if (customShards !== null) {
+                    for (let i = 0; i < customShards.length; i++) {
+                        let adjShard = [];
+                        let posX = customShards[i][0][0];
+                        let posY = customShards[i][0][1];
+                        customShards[i].forEach(function(vertices, verticesIndex) {
+                            adjShard[verticesIndex] = [];
+                            adjShard[verticesIndex][0] = customShards[i][verticesIndex][0] - customShards[i][0][0];
+                            adjShard[verticesIndex][1] = customShards[i][verticesIndex][1] - customShards[i][0][1];
+                        });
+                        
+                        console.log(posX);
+                        shards.push(
+                            new Shard(
+                                posX,
+                                posY,
+                                null,
+                                lowerBound,
+                                adjShard
+                            )
+                        );
+                    }
                 }
-                for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
-                    let ranposX = Math.floor(Math.random() * 50) - 25;
-                    let ranposY = Math.floor(Math.random() * 50) - 50;
-                    shards.push(
-                        new Shard(
-                            canvas_dims.x / 2 + ranposX - 10,
-                            canvas_offset + ranposY,
-                            null,
-                            lowerBound
-                        )
-                    );
+                else {
+                    for (let i = 0; i < shard_cnt; i++) {
+                        let ranposX = Math.floor(Math.random() * 50) - 25;
+                        let ranposY = Math.floor(Math.random() * 50) - 50;
+                        shards.push(
+                            new Shard(
+                                canvas_dims.x / 2 + ranposX - 10,
+                                canvas_offset + ranposY,
+                                shard_size,
+                                lowerBound
+                            )
+                        );
+                    }
+                    for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
+                        let ranposX = Math.floor(Math.random() * 50) - 25;
+                        let ranposY = Math.floor(Math.random() * 50) - 50;
+                        shards.push(
+                            new Shard(
+                                canvas_dims.x / 2 + ranposX - 10,
+                                canvas_offset + ranposY,
+                                null,
+                                lowerBound
+                            )
+                        );
+                    }
                 }
+                console.log(shards[0]);
 
                 return shards;
             }
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size, lowerBound) {
+            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null) {
                 // Variables.
                 this.pos = {
                     x: iPosX,
                     y: iPosY
                 };
+                this.countDown = 100;
 
                 this.chaff = true;
                 if (size !== null && size > chaffSize) {
@@ -203,45 +233,60 @@
                 // this.rotation = 0;
                 this.deletable = false;
 
-                this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
+                // this.vertices;
 
-                // https://www.w3schools.com/js/js_random.asp
-                this.vertices_cnt = Math.floor(Math.random() * 3) + 3;
-                if (this.chaff === true) {
-                    this.vertices = sortPoints(
-                        randomPoints(this.vertices_cnt, chaffSize, chaffSize),
-                        chaffSize,
-                        chaffSize
-                    );
-                } else {
-                    this.vertices = sortPoints(
-                        randomPoints(
-                            this.vertices_cnt,
-                            props.shard_size + this.shard_variance,
-                            props.shard_size + this.shard_variance
-                        ),
-                        props.shard_size,
-                        props.shard_size
-                    );
+                if (customVertices !== null) {
+                    this.vertices = [];
+                    this.vertices[0] = customVertices;
+                    this.vertices[1] = [0, 0];
                 }
+                else {
+                    this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
+
+                    // https://www.w3schools.com/js/js_random.asp
+                    this.vertices_cnt = Math.floor(Math.random() * 3) + 3;
+                    if (this.chaff === true) {
+                        this.vertices = sortPoints(
+                            randomPoints(this.vertices_cnt, chaffSize, chaffSize),
+                            chaffSize,
+                            chaffSize
+                        );
+                    } else {
+                        this.vertices = sortPoints(
+                            randomPoints(
+                                this.vertices_cnt,
+                                props.shard_size + this.shard_variance,
+                                props.shard_size + this.shard_variance
+                            ),
+                            props.shard_size,
+                            props.shard_size
+                        );
+                    }
+                }
+                
                 this.horizontalVelocity = Math.random() * MPH_velocity - MPH_velocity / 2;
                 this.verticalVelocity = Math.random() * MPV_velocity - MPV_velocity / 2;
 
                 // Functions.
                 this.update = function () {
-                    this.verticalVelocity += g_acceleration;
-                    if (this.verticalVelocity >= maxVelocity) {
-                    this.verticalVelocity = maxVelocity;
+                    if (this.countDown > 0) {
+                        this.countDown--;
                     }
-                    // this.rotation += this.rpf;
+                    else {
+                        this.verticalVelocity += g_acceleration;
+                        if (this.verticalVelocity >= maxVelocity) {
+                        this.verticalVelocity = maxVelocity;
+                        }
+                        // this.rotation += this.rpf;
 
-                    this.pos = {
-                        x: this.pos.x + this.horizontalVelocity,
-                        y: this.pos.y + this.verticalVelocity
-                    };
+                        this.pos = {
+                            x: this.pos.x + this.horizontalVelocity,
+                            y: this.pos.y + this.verticalVelocity
+                        };
 
-                    if (this.pos.y > this.lowerBound) {
-                        this.deletable = true;
+                        if (this.pos.y > this.lowerBound) {
+                            this.deletable = true;
+                        }
                     }
                 };
 
@@ -269,6 +314,7 @@
                     // circle(0, 0, 10);
                     // sketch.rotate(this.rotation);
                     sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
+                    // sketch.circle(0,0,100);
                     sketch.beginShape();
                     for (let i = 0; i < this.vertices[0].length; i++) {
                         sketch.vertex(this.vertices[0][i][0], this.vertices[0][i][1]);
@@ -315,6 +361,189 @@
             }
         }
     }
+
+    let myCustomVertices = [
+        [ 
+            [363.2, 338.14], 
+            [369.6, 333.9], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [369.6, 333.9], 
+            [371.2, 334.96], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [371.2, 334.96], 
+            [372.8, 340.26], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [372.8, 340.26], 
+            [376, 341.32], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [376, 341.32], 
+            [374.4, 352.45000000000005], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [374.4, 352.45000000000005], 
+            [378.8, 350.86], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [378.8, 350.86], 
+            [379.84, 345.56], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [379.84, 345.56], 
+            [385.6, 345.56], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [385.6, 345.56], 
+            [387.2, 340.26], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [387.2, 340.26], 
+            [399.2, 332.84], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [399.2, 332.84], 
+            [400, 327.54], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [400, 327.54], 
+            [401.6, 324.36], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [401.6, 324.36], 
+            [401.99999999999994, 322.24], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [401.99999999999994, 322.24], 
+            [395.2, 319.59], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [395.2, 319.59], 
+            [390.8, 316.40999999999997], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [390.8, 316.40999999999997], 
+            [388, 323.3], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [388, 323.3], 
+            [381.6, 321.18], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [381.6, 321.18], 
+            [375.2, 322.24], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [375.2, 322.24], 
+            [367.2, 301.03999999999996], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [367.2, 301.03999999999996], 
+            [361.6, 283.55], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [361.6, 283.55], 
+            [357.6, 282.48999999999995], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [357.6, 282.48999999999995], 
+            [347.2, 287.949], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [347.2, 287.949], 
+            [344, 289.645], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [344, 289.645], 
+            [340.8, 287.26000000000005], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [340.8, 287.26000000000005], 
+            [333.6, 291.5], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [333.6, 291.5], 
+            [347.6, 302.63000000000005], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [347.6, 302.63000000000005], 
+            [347.6, 306.34], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [347.6, 306.34], 
+            [343.2, 312.16999999999996], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [343.2, 312.16999999999996], 
+            [345.6, 313.76000000000005], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [345.6, 313.76000000000005], 
+            [350.08, 324.89], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [350.08, 324.89], 
+            [351.2, 325.95], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [351.2, 325.95], 
+            [351.6, 329.66], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [351.6, 329.66], 
+            [354.4, 334.96], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [354.4, 334.96], 
+            [356, 336.02], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [356, 336.02], 
+            [363.2, 344.5], 
+            [373.6, 328.6], 
+        ], 
+        [ 
+            [363.2, 344.5], 
+            [363.2, 338.14], 
+            [373.6, 328.6], 
+        ], 
+    ] 
 </script>
 
 <style lang="scss">
