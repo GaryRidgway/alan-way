@@ -66,6 +66,7 @@
                 // We use both these variables to make sure the audio plays
                 let groundAudioTriggers = 0;
                 let groundAudioHasPlayed = false;
+                let paneHeight = 325;
                 
                 sketch.clicks = 0;
                 sketch.triggerMakeShards = false;
@@ -145,13 +146,15 @@
 
                     let determinativeCustomShards   = props.use_custom_shards ? myCustomVertices : null;
                     let determinativeClipAxisOffset = props.use_custom_shards ? sketch.clipAxisOffset + sketch.mouseYPos : null;
+                    let determinativePaneHeight     = props.use_custom_shards ? paneHeight : null;
 
                     canvasShards = shardsCreate(
                         canvas_data_shard_cnt,
                         canvas_data_shard_size,
                         lowerBound,
                         determinativeCustomShards,
-                        determinativeClipAxisOffset
+                        determinativeClipAxisOffset,
+                        determinativePaneHeight
                     );
                 };
             };
@@ -159,7 +162,7 @@
             // Set up the canvases.
             this.canvasedSketch = new p5(newSketch);
 
-            function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null) {
+            function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null,  paneHeight = null) {
                 let shards = [];
                 if (customShards !== null) {
                     console.log(shardsClipAxisOffset);
@@ -181,7 +184,8 @@
                                 100,
                                 lowerBound,
                                 adjShard,
-                                shardsClipAxisOffset
+                                shardsClipAxisOffset,
+                                paneHeight
                             )
                         );
                     }
@@ -218,7 +222,7 @@
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null) {
+            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null, paneHeight = null) {
                 // Variables.
                 this.pos = {
                     x: iPosX,
@@ -249,7 +253,9 @@
                     this.vertices = [];
 
                     // Truncate the polygon if it is too big for its position.
-                    this.vertices[0] = truncatePolygon(clipAxisOffset, true, customVertices, this.pos.y);
+                    // This vvvv needs to be refactored, we need to be passing a reference to the sketch.
+                    let baseOffset = 189;
+                    this.vertices[0] = truncatePolygon(2 *paneHeight - clipAxisOffset, (paneHeight - baseOffset) / 2 < (clipAxisOffset - baseOffset), customVertices, this.pos.y);
                     this.vertices[1] = myCustomOffset;
                 }
                 else {
@@ -346,7 +352,13 @@
                 let newPoly = [];
                 poly.forEach(function(vertex, index) {
 
-                    let truncate = truncatable(tPoint, clipAxis, vertex[1] + yOffset);
+                    let truncate = false;
+                    if (clipAxis) {
+                        truncate = truncatable(tPoint, clipAxis, vertex[1] + yOffset);
+                    }
+                    else {
+                        truncate = truncatable(tPoint, clipAxis, vertex[1] - yOffset);
+                    }
 
                     if (truncate) {
                         // Intersect formula.
@@ -360,17 +372,11 @@
                         lrv.forEach(function(lrvV) {
                             // https://content.byui.edu/file/b8b83119-9acc-4a7b-bc84-efacf9043998/1/Math-2-11-2.html#WS1
                             // Only add a new vertex for this if the lrvV is not going to be truncated.
-                            if (!truncatable(tPoint, clipAxis, lrvV[1] + yOffset)) {
+                            let lrvVTruncatable = clipAxis ? truncatable(tPoint, clipAxis, lrvV[1] + yOffset) :truncatable(tPoint, clipAxis, lrvV[1] - yOffset);
+                            if (!lrvVTruncatable) {
                                 let slope = (lrvV[1] - vertex[1]) / (lrvV[0] - vertex[0]);
                                 let intercept = vertex[1] - (slope * vertex[0]);
                                 let x = (tPoint - yOffset - intercept) / slope;
-
-                                console.log('____________________');
-                                console.log('lrvV    : ' + lrvV[1]);
-                                console.log('yOffset : ' + yOffset);
-                                console.log('tPoint  : ' + tPoint );
-                                console.log('tPoint - yOffset  : ' + (tPoint - yOffset) );
-                                console.log('____________________');
 
                                 newPoly.push([x, tPoint - yOffset]);
                             }
