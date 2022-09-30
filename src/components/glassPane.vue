@@ -5,7 +5,7 @@
             :canvas_no = "1"
             canvas_id = "back_blast"
             :shard_cnt = 7
-            :shard_size = 100
+            :shard_size = 35
             :plays_audio = true
             :use_custom_shards = true
         />
@@ -159,11 +159,11 @@
                 plate_crack_rule += "top: -" + y + "px !important;";
                 plate_crack_rule += "}";
 
-                plate_crack_bg_positioner_rule =
-                    ".positioning-pixel .nameplate-positioner, .positioning-pixel .faux-crack-bg-positioner {";
+                // plate_crack_bg_positioner_rule =
+                //     ".positioning-pixel .nameplate-positioner, .positioning-pixel .faux-crack-bg-positioner {";
                 // plate_crack_bg_positioner_rule +=
                 //   "transform: rotate(-" + crack_rotation + "deg) !important;";
-                plate_crack_bg_positioner_rule += "}";
+                // plate_crack_bg_positioner_rule += "}";
 
                 // Okay, so I know this looks stupid, but hear me out.
                 // Because the styles are being overridden so often, and there are so many, repaint flickering can occur.
@@ -216,7 +216,7 @@
 
                     if (Object.keys(refs)[Cindex]) {
                         // console.log(refs[Object.keys(refs)[Cindex]])
-                        refs[Object.keys(refs)[Cindex]].makeShards(clicks, y);
+                        refs[Object.keys(refs)[Cindex]].makeShards(clicks, [x, y]);
                     }
                 });
 

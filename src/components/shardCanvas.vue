@@ -23,7 +23,8 @@
             /* ######### P5 stuff ######### */
 
             let style_rules = getComputedStyle(document.body);
-            let props = this.$props;
+            let $props = this.$props;
+            let $data = this.$data;
             let glass_color = style_rules.getPropertyValue("--clear-glass-light");
             let chaffSize = 3;
             let chaffMultiplier = 3.5;
@@ -50,13 +51,14 @@
 
             p5.disableFriendlyErrors = true;
 
-            let newSketch = function (sketch) {
-                let canvas_data_id = props.canvas_id;
-                let canvas_data_parent = 'glassCanvas-' + props.canvas_no;
-                let canvas_data_shard_cnt = props.shard_cnt;
-                let canvas_data_shard_size = props.shard_size;
+            // Set up the canvas.
+            this.canvasedSketch = new p5(function(sketch) {
+                let canvas_data_id = $props.canvas_id;
+                let canvas_data_parent = 'glassCanvas-' + $props.canvas_no;
+                let canvas_data_shard_cnt = $props.shard_cnt;
+                let canvas_data_shard_size = $props.shard_size;
                 let fill_c = sketch.color(glass_color);
-                let plays_audio = props.plays_audio;
+                let plays_audio = $props.plays_audio;
                 let canvasElement;
                 let distFromTop = 0;
                 // Programatically get this some day.
@@ -70,8 +72,10 @@
                 
                 sketch.clicks = 0;
                 sketch.triggerMakeShards = false;
+                sketch.mousePos = [];
                 sketch.mouseYPos = 0;
                 sketch.clipAxisOffset = 189;
+                sketch.canvas_offset = canvas_offset;
 
                 sketch.setup = function () {
                     let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
@@ -104,6 +108,9 @@
                     sketch.fill(fill_c);
                     sketch.strokeWeight(1);
                     sketch.stroke(sketch.color("rgba(255,255,255,0.5)"));
+
+                    // DEBUG: show cursor click position.
+                    // sketch.circle(canvas_dims.x/2, canvas_offset, 20)
                     if (canvasShards.length > 0) {
 
                         // We invert the array to stop jittering.
@@ -137,16 +144,16 @@
                     // Preliminary lower bound for the canvas.
                     canvasElement = document.querySelector("#" + canvas_data_parent + " canvas");
                     distFromTop = window.pageYOffset + canvasElement.getBoundingClientRect().top;
-                    lowerBound = window.innerHeight - distFromTop + props.shard_size;
+                    lowerBound = window.innerHeight - distFromTop + $props.shard_size;
 
                     // if the lower bound is greater than the canvas has height...
                     if (lowerBound > canvas_dims.y) {
-                        lowerBound = canvas_dims.y + props.shard_size;
+                        lowerBound = canvas_dims.y + $props.shard_size;
                     }
 
-                    let determinativeCustomShards   = props.use_custom_shards ? myCustomVertices : null;
-                    let determinativeClipAxisOffset = props.use_custom_shards ? sketch.clipAxisOffset + sketch.mouseYPos : null;
-                    let determinativePaneHeight     = props.use_custom_shards ? paneHeight : null;
+                    let determinativeCustomShards   = $props.use_custom_shards ? myCustomVertices : null;
+                    let determinativeClipAxisOffset = $props.use_custom_shards ? sketch.clipAxisOffset + sketch.mouseYPos : null;
+                    let determinativePaneHeight     = $props.use_custom_shards ? paneHeight : null;
 
                     canvasShards = shardsCreate(
                         canvas_data_shard_cnt,
@@ -157,17 +164,13 @@
                         determinativePaneHeight
                     );
                 };
-            };
-
-            // Set up the canvases.
-            this.canvasedSketch = new p5(newSketch);
+            });
 
             function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null,  paneHeight = null) {
                 let shards = [];
                 if (customShards !== null) {
-                    console.log(shardsClipAxisOffset);
-                    for (let i = 0; i < customShards.length; i++) {
-                    // for (let i = 0; i < 1; i++) {
+                    // for (let i = 0; i < customShards.length; i++) {
+                    for (let i = 10; i < 3 +10; i++) {
                         let adjShard = [];
                         let posX = customShards[i][0][0];
                         let posY = customShards[i][0][1];
@@ -254,9 +257,20 @@
 
                     // Truncate the polygon if it is too big for its position.
                     // This vvvv needs to be refactored, we need to be passing a reference to the sketch.
-                    let baseOffset = 189;
-                    this.vertices[0] = truncatePolygon(2 *paneHeight - clipAxisOffset, (paneHeight - baseOffset) / 2 < (clipAxisOffset - baseOffset), customVertices, this.pos.y);
+                    // The position here is from the left of an initial image measured as 800px/530px.
+                    let measuredWidth = 800;
+                    let measuredHeight = 530;
+                    let sketchWidth = 400
+                    let widthDiff = (measuredWidth - sketchWidth) / 2
+                    let offsetX = this.pos.x - widthDiff + myCustomOffset[0];
+                    let offsetY = this.pos.y + myCustomOffset[1];
+                    this.pos = {
+                        x: offsetX,
+                        y: offsetY
+                    };
+                    this.vertices[0] = customVertices;
                     this.vertices[1] = myCustomOffset;
+                    console.log(customVertices, $data.canvasedSketch.mousePos);
                 }
                 else {
                     this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
@@ -323,18 +337,24 @@
                     // );
 
                     // sketch.angleMode(sketch.DEGREES);
-                    sketch.translate(
-                        this.vertices[1][0] + this.pos.x + crack_offset.x,
-                        this.vertices[1][1] + this.pos.y + crack_offset.y
-                    );
 
                     // DEBUG::SHOWS ROTATION CENTER.
                     // circle(0, 0, 10);
                     // sketch.rotate(this.rotation);
+                    // console.log(this.pos);
                     if (!this.hasCustomVertices) {
+                        sketch.translate(
+                            this.vertices[1][0] + this.pos.x + crack_offset.x,
+                            this.vertices[1][1] + this.pos.y + crack_offset.y
+                        );
                         sketch.translate(-this.vertices[1][0], -this.vertices[1][1]);
                     }
-                    // sketch.circle(0,0,100);
+                    else {
+                        sketch.translate(
+                            this.pos.x,
+                            this.pos.y
+                        );
+                    }
 
                     sketch.beginShape();
                     for (let i = 0; i < this.vertices[0].length; i++) {
@@ -406,7 +426,38 @@
                 return truncate;
             }
 
-            // BIG props.
+            // `bounds` is an array of two items, width and height of the bounding box (Ex. [300, 100]).
+            // `mousePos` is an array of two items, the x and y of the mouse's position in the bounding box (Ex. [200, 50]).
+            function bindPolygon(bounds, mousePos, InitialPolygon, InitialPolygonPos, sketch) {
+                let newPolygon = [];
+                let boundsO = {
+                    x: bounds[0],
+                    y: bounds[1]
+                }
+                let mouseO = {
+                    x: mousePos[0],
+                    y: mousePos[1]
+                }
+
+                // Check if the mouse is within the bounds.
+                let inBounds = 0 < mouseO.x < boundsO.x && 0 < mouseO.y < boundsO.y;
+
+                // If it is...
+                if (inBounds) {
+
+
+                    return polygon;
+                }
+
+                // Else...
+                else {
+
+                    // No need to truncate polygons, we aren't in the bounding box!
+                    return null
+                }
+            }
+
+            // BIG $props.
             // https://observablehq.com/@tarte0/generate-random-simple-polygon
             function randomPoints(n, width, height) {
             const points = [];
@@ -417,27 +468,27 @@
             }
 
             function sortPoints(points, width, height) {
-            const centerPoint = [width / 2, height / 2];
-            const sorted = points.slice(0);
-            let angleFromCenter;
+                const centerPoint = [width / 2, height / 2];
+                const sorted = points.slice(0);
+                let angleFromCenter;
 
-            const sortByAngle = (p1, p2) => {
-                return (
-                (Math.atan2(p1[1] - centerPoint[1], p1[0] - centerPoint[0]) * 180) /
-                    Math.PI -
-                (Math.atan2(p2[1] - centerPoint[1], p2[0] - centerPoint[0]) * 180) /
-                    Math.PI
-                );
-            };
+                const sortByAngle = (p1, p2) => {
+                    return (
+                    (Math.atan2(p1[1] - centerPoint[1], p1[0] - centerPoint[0]) * 180) /
+                        Math.PI -
+                    (Math.atan2(p2[1] - centerPoint[1], p2[0] - centerPoint[0]) * 180) /
+                        Math.PI
+                    );
+                };
 
-            sorted.sort(sortByAngle);
-            return [sorted, centerPoint];
+                sorted.sort(sortByAngle);
+                return [sorted, centerPoint];
             }
-
         },
         methods: {
-            makeShards(clicks, mouseYPos) {
-                this.canvasedSketch.mouseYPos = mouseYPos;
+            makeShards(clicks, mousePos) {
+                this.canvasedSketch.mousePos = mousePos;
+                this.canvasedSketch.mouseYPos = mousePos[1];
                 this.canvasedSketch.triggerMakeShards = true;
                 this.canvasedSketch.clicks = clicks;
                 this.canvasedSketch.loop();
@@ -445,7 +496,8 @@
         }
     }
 
-    let myCustomOffset = [-165, -215];
+    // let myCustomOffset = [-165, -215];
+    let myCustomOffset = [27, -225];
 
     let myCustomVertices = [
         [ 
