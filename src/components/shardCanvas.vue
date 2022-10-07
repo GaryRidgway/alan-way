@@ -21,6 +21,7 @@
         },
         mounted() {
             /* ######### P5 stuff ######### */
+            let shardCounter = 0;
 
             let style_rules = getComputedStyle(document.body);
             let $props = this.$props;
@@ -35,9 +36,13 @@
             let MPV_velocity = 10;
             let g_acceleration = 0.6;
             let maxVelocity = 9.8;
+            // let crack_offset = {
+            //     x: -8,
+            //     y: -9
+            // };
             let crack_offset = {
-                x: -8,
-                y: -9
+                x: 0,
+                y: 0
             };
             let canvas_dims = {
                 x: 400,
@@ -76,6 +81,15 @@
                 sketch.mouseYPos = 0;
                 sketch.clipAxisOffset = 189;
                 sketch.canvas_offset = canvas_offset;
+                sketch.paneRect = null;
+                sketch.canvasRelPos = {
+                    x: 0,
+                    y: 0
+                };
+                sketch.bounds = {
+                    x: 786,
+                    y: 136
+                };
 
                 sketch.setup = function () {
                     let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
@@ -169,8 +183,7 @@
             function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null,  paneHeight = null) {
                 let shards = [];
                 if (customShards !== null) {
-                    // for (let i = 0; i < customShards.length; i++) {
-                    for (let i = 10; i < 3 +10; i++) {
+                    for (let i = 0; i < customShards.length; i++) {
                         let adjShard = [];
                         let posX = customShards[i][0][0];
                         let posY = customShards[i][0][1];
@@ -225,14 +238,19 @@
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null, paneHeight = null) {
+            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null, paneHeight = null, panePoly = false) {
+                
                 // Variables.
                 this.pos = {
                     x: iPosX,
                     y: iPosY
                 };
-                this.countDown = 3;
-                this.countDown = 1000;
+                this.countDown = 0;
+
+                this.id = shardCounter;
+                shardCounter++;
+                this.vertices = [];
+                this.edges = []
 
                 this.hasCustomVertices = customVertices !== null ? true : false;
 
@@ -252,7 +270,7 @@
                 // this.rotation = 0;
                 this.deletable = false;
 
-                if (customVertices !== null) {
+                if (this.hasCustomVertices) {
                     this.vertices = [];
 
                     // Truncate the polygon if it is too big for its position.
@@ -261,16 +279,34 @@
                     let measuredWidth = 800;
                     let measuredHeight = 530;
                     let sketchWidth = 400
-                    let widthDiff = (measuredWidth - sketchWidth) / 2
+
+                    // This takes the position measured off the original 800w position
+                    // and then changes it to be measured off the current sketch width.
+                    let widthDiff = (measuredWidth - sketchWidth) / 2;
+
+                    // Then, use the position of the point measured off the canas width
+                    // And adjust it using our diff and custom offset.
                     let offsetX = this.pos.x - widthDiff + myCustomOffset[0];
                     let offsetY = this.pos.y + myCustomOffset[1];
+
+                    // The new position is the vertex's point to be drawn in the canvas.
+                    // NOTE: This is NOT relative to the pane of glass.
                     this.pos = {
                         x: offsetX,
                         y: offsetY
                     };
                     this.vertices[0] = customVertices;
                     this.vertices[1] = myCustomOffset;
-                    console.log(customVertices, $data.canvasedSketch.mousePos);
+                }
+                else if (panePoly) {
+                    this.vertices[0] = [
+                        [0, 0],
+                        [$data.canvasedSketch.bounds.x, 0],
+                        [$data.canvasedSketch.bounds.x, $data.canvasedSketch.bounds.y],
+                        [0, $data.canvasedSketch.bounds.y],
+                    ]; 
+                    this.vertices[1] = [$data.canvasedSketch.paneRect.x, $data.canvasedSketch.paneRect.y];
+                    this.id = -1;
                 }
                 else {
                     this.shard_variance = Math.floor(Math.random() * variance) - variance / 2;
@@ -299,6 +335,155 @@
                 this.horizontalVelocity = Math.random() * MPH_velocity - MPH_velocity / 2;
                 this.verticalVelocity = Math.random() * MPV_velocity - MPV_velocity / 2;
 
+                this.truePosVerts = function() {
+                    let relativeVertices = this.vertices;
+                    let trueVertices = [];
+                    let localPos = this.pos;
+
+                    if(this.hasCustomVertices) {
+                        relativeVertices[0].forEach(function(vertex) {
+                            let RtoPaneVertexPos = {
+                                x: $data.canvasedSketch.canvasRelPos.x + localPos.x + vertex[0],
+                                y: $data.canvasedSketch.canvasRelPos.y + localPos.y + vertex[1],
+                            }
+                            trueVertices.push([RtoPaneVertexPos.x, RtoPaneVertexPos.y]);
+                        });
+
+                        return trueVertices;
+                    }
+                    else if (panePoly) {
+                        return relativeVertices[0];
+                    }
+
+                    return null;
+                }
+
+                this.localPosVerts = function(vertices) {
+                    let trueVertices = vertices;
+                    let relativeVertices = [];
+                    let localPos = this.pos;
+
+                    if(this.hasCustomVertices) {
+                        trueVertices.forEach(function(vertex) {
+                            let RtoPosVertexPos = {
+                                x: vertex[0] - ($data.canvasedSketch.canvasRelPos.x + localPos.x),
+                                y: vertex[1] - ($data.canvasedSketch.canvasRelPos.y + localPos.y),
+                            }
+                            relativeVertices.push([RtoPosVertexPos.x, RtoPosVertexPos.y]);
+                        });
+
+                        return relativeVertices;
+                    }
+                    else if (panePoly) {
+                        return trueVertices;
+                    }
+
+                    return null;
+
+                }
+
+                this.makeEdges = function() {
+                    this.edges = []
+
+                    for (let n = 0; n < this.truePosVerts().length; n++) {
+                        let coord = {x: this.truePosVerts()[n][0], y:this.truePosVerts()[n][1]}
+                        let nextCoord = {
+                            x: this.truePosVerts()[(n + 1) % this.truePosVerts().length][0],
+                            y: this.truePosVerts()[(n + 1) % this.truePosVerts().length][1]
+                        }
+
+                        this.edges.push(new makeLine(coord, nextCoord))
+                    }
+                }
+
+                this.collisionCheck = function(otherPoly) {
+                    let collisionArea = []
+
+                    if(this.id == otherPoly.id){
+                        return collisionArea
+                    }
+
+                    let intersection = false
+                    for (let n = 0; n < this.edges.length; n++) {
+                        let currLine = this.edges[n]
+
+                        for (let k = 0; k < otherPoly.edges.length; k++) {
+                            let otherLine = otherPoly.edges[k];
+                            let check = currLine.intersects(otherLine);
+                            if (check) {
+                                collisionArea.push(check);
+                                intersection = true;
+                            }
+                        }
+                    }
+                    return collisionArea
+                }
+
+                this.checkIfPointWithin = function(p){
+                    // ray-casting algorithm based on
+                    // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html/pnpoly.html
+
+                    let x = p[0];
+                    let y = p[1];
+
+                    var inside = false;
+                    let vs = this.truePosVerts();
+                    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                
+                        var xi = vs[i][0], yi = vs[i][1];
+                        var xj = vs[j][0], yj = vs[j][1];
+
+                        var intersect = ((yi > y) != (yj > y))
+                            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                        if (intersect) inside = !inside;
+                    }
+
+                    return inside;
+                }
+
+
+                this.getIntersectionArea = function(otherPoly) {
+                    let intersectionPoints = this.collisionCheck(otherPoly);
+
+                    if (intersectionPoints.length == 0) {
+                        return false
+                    }
+
+                    // Find points of other rectangle contained within this rectangle
+                    let otherPointsWithinThis = otherPoly.truePosVerts().filter(v => this.checkIfPointWithin(v));
+                    otherPointsWithinThis.forEach(function(point, index) {
+                        otherPointsWithinThis[index] = {
+                            x: point[0],
+                            y: point[1]
+                        };
+                    })
+
+                    // Find points of this rectangle contained within the other rectangle
+                    let thisPointsWithinOther = this.truePosVerts().filter(v => otherPoly.checkIfPointWithin(v));
+                    thisPointsWithinOther.forEach(function(point, index) {
+                        thisPointsWithinOther[index] = {
+                            x: point[0],
+                            y: point[1]
+                        };
+                    })
+
+                    let allPoints = [
+                        ...intersectionPoints,
+                        ...otherPointsWithinThis,
+                        ...thisPointsWithinOther
+                    ]
+
+                    let N = allPoints.length
+                    let centerX = allPoints.reduce( (p, c) => p + c.x, 0)/N
+                    let centerY = allPoints.reduce( (p, c) => p + c.y, 0)/N
+
+                    let pointsAndAngs = allPoints.map( p => ({p: p, ang: Math.atan2(centerY - p.y, centerX - p.x)}))
+
+                    pointsAndAngs.sort((a, b) => a.ang - b.ang)
+
+                    return pointsAndAngs
+                }
+
                 // Functions.
                 this.update = function () {
                     if (this.countDown > 0) {
@@ -307,7 +492,7 @@
                     else {
                         this.verticalVelocity += g_acceleration;
                         if (this.verticalVelocity >= maxVelocity) {
-                        this.verticalVelocity = maxVelocity;
+                            this.verticalVelocity = maxVelocity;
                         }
                         // this.rotation += this.rpf;
 
@@ -323,18 +508,8 @@
                 };
 
                 this.display = function (sketch) {
-                    // if (this.chaff) {
-                    //   return;
-                    // }
 
                     sketch.push();
-
-                    // DEBUG::SHOWS OFFSET CENTER.
-                    // sketch.circle(
-                    //   canvas_dims.x / 2 + crack_offset.x,
-                    //   canvas_offset + crack_offset.y,
-                    //   10
-                    // );
 
                     // sketch.angleMode(sketch.DEGREES);
 
@@ -363,73 +538,22 @@
                     sketch.endShape(sketch.CLOSE);
                     sketch.pop();
                 };
-            }
-
-            // Returns a new polygon that is truncated above or below (tAxis) a truncation point (tPoint).
-            // For clipAxis, false is above and true is below.
-            // FLIP ABOVE???
-            function truncatePolygon(tPoint, clipAxis, poly, yOffset) {
-                let newPoly = [];
-                poly.forEach(function(vertex, index) {
-
-                    let truncate = false;
-                    if (clipAxis) {
-                        truncate = truncatable(tPoint, clipAxis, vertex[1] + yOffset);
-                    }
-                    else {
-                        truncate = truncatable(tPoint, clipAxis, vertex[1] - yOffset);
-                    }
-
-                    if (truncate) {
-                        // Intersect formula.
-                        // Left and right vertices.
-                        let lrv = [
-                            poly[(poly.length + index - 1) % poly.length],
-                            poly[(poly.length + index + 1) % poly.length]
-                        ];
-
-                        // For each line made with our vertex...
-                        lrv.forEach(function(lrvV) {
-                            // https://content.byui.edu/file/b8b83119-9acc-4a7b-bc84-efacf9043998/1/Math-2-11-2.html#WS1
-                            // Only add a new vertex for this if the lrvV is not going to be truncated.
-                            let lrvVTruncatable = clipAxis ? truncatable(tPoint, clipAxis, lrvV[1] + yOffset) :truncatable(tPoint, clipAxis, lrvV[1] - yOffset);
-                            if (!lrvVTruncatable) {
-                                let slope = (lrvV[1] - vertex[1]) / (lrvV[0] - vertex[0]);
-                                let intercept = vertex[1] - (slope * vertex[0]);
-                                let x = (tPoint - yOffset - intercept) / slope;
-
-                                newPoly.push([x, tPoint - yOffset]);
-                            }
-                        });
-                    }
-                    else {
-                        newPoly.push(vertex);
-                    }
-                });
-
-                return newPoly;
-            }
-
-            function truncatable(tPoint, clipAxis, vertexY) {
-                let truncate = false;
-                if (clipAxis) {
-                    if(vertexY > tPoint) {
-                        truncate = true;
-                    }
+                
+                if (this.hasCustomVertices) {
+                    this.makeEdges();
+                    this.vertices[0] = bindPolygon([786, 136], this, this.pos);
                 }
-                else {
-                    if(vertexY < tPoint) {
-                        truncate = true;
-                    }
-                }
-
-                return truncate;
             }
 
             // `bounds` is an array of two items, width and height of the bounding box (Ex. [300, 100]).
             // `mousePos` is an array of two items, the x and y of the mouse's position in the bounding box (Ex. [200, 50]).
-            function bindPolygon(bounds, mousePos, InitialPolygon, InitialPolygonPos, sketch) {
+            //
+            // The fingerprints of the below sources are all over this project, but this is the most relevant spot to list them.
+            // https://math.libretexts.org/Courses/Monroe_Community_College/MTH_220_Discrete_Math/4%3A_Sets/4.3%3A_Unions_and_Intersections
+            // https://gorillasun.de/blog/an-algorithm-for-polygon-intersections
+            function bindPolygon(bounds, InitialPolygon, InitialPolygonPos) {
                 let newPolygon = [];
+                let mousePos = $data.canvasedSketch.mousePos;
                 let boundsO = {
                     x: bounds[0],
                     y: bounds[1]
@@ -438,23 +562,57 @@
                     x: mousePos[0],
                     y: mousePos[1]
                 }
+                let pane = null;
 
                 // Check if the mouse is within the bounds.
-                let inBounds = 0 < mouseO.x < boundsO.x && 0 < mouseO.y < boundsO.y;
+                let inBounds = isInBounds(boundsO, mouseO);
 
                 // If it is...
                 if (inBounds) {
+                    pane = new Shard(null, null, null, null, null, null, null, true);
+                    for (let n = 0; n < 1; n++) {
+                        let currP = InitialPolygon;
+                        let otherP = pane;
 
+                        if(currP.id != otherP.id){
+                            let check = currP.getIntersectionArea(otherP);
 
-                    return polygon;
+                            if(check){
+                                check.forEach(v => newPolygon.push([v.p.x, v.p.y]));
+
+                                return InitialPolygon.localPosVerts(newPolygon);
+                            }
+                            
+                            return InitialPolygon.vertices[0];
+                        }
+                    }
                 }
 
                 // Else...
                 else {
 
                     // No need to truncate polygons, we aren't in the bounding box!
-                    return null
+                    return InitialPolygon.vertices[0];
                 }
+            }
+
+            // Return true if point in bounds.
+            // bounds is an object with an x and a y.
+            // point is an object with an x and a y.
+            function isInBounds(bounds, point) {
+
+                // If in bounds return true.
+                if(
+                    0 < point.x && 
+                    point.x < bounds.x &&
+                    0 < point.y && 
+                    point.y < bounds.y
+                ) {
+                    return true;
+                }
+
+                // If not in bounds return false
+                return false;
             }
 
             // BIG $props.
@@ -484,12 +642,69 @@
                 sorted.sort(sortByAngle);
                 return [sorted, centerPoint];
             }
+
+            // line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+            // Determine the intersection point of two line segments
+            // Return FALSE if the lines don't intersect
+            function intersect(line1, line2) {
+                let x1 = line1.p1.x
+                let y1 = line1.p1.y
+
+                let x2 = line1.p2.x
+                let y2 = line1.p2.y
+
+                let x3 = line2.p1.x
+                let y3 = line2.p1.y
+
+                let x4 = line2.p2.x
+                let y4 = line2.p2.y
+
+                // Check if none of the lines are of length 0
+                if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4)) {
+                    return false
+                }
+
+                let denominator = ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
+
+                // Lines are parallel
+                if (denominator === 0) {
+                    return false
+                }
+
+                let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
+                let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
+
+                // is the intersection along the segments
+                if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+                    return false
+                }
+
+                // Return an object with the x and y coordinates of the intersection
+                let x = x1 + ua * (x2 - x1)
+                let y = y1 + ua * (y2 - y1)
+
+                return {
+                    x,
+                    y
+                }
+            }
+
+            function makeLine(p1, p2) {
+                this.p1 = p1
+                this.p2 = p2
+
+                this.intersects = function(otherLine) {
+                    return intersect(this, otherLine)
+                }
+            }
         },
         methods: {
-            makeShards(clicks, mousePos) {
+            makeShards(clicks, mousePos, canvasRelPos, paneRect) {
                 this.canvasedSketch.mousePos = mousePos;
                 this.canvasedSketch.mouseYPos = mousePos[1];
+                this.canvasedSketch.canvasRelPos = canvasRelPos;
                 this.canvasedSketch.triggerMakeShards = true;
+                this.canvasedSketch.paneRect = paneRect;
                 this.canvasedSketch.clicks = clicks;
                 this.canvasedSketch.loop();
             }
@@ -498,6 +713,7 @@
 
     // let myCustomOffset = [-165, -215];
     let myCustomOffset = [27, -225];
+    // let myCustomOffset = [0, -225];
 
     let myCustomVertices = [
         [ 

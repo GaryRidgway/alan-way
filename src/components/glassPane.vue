@@ -47,7 +47,7 @@
         </div>
       </div>
       
-      <!-- <shard-canvas
+      <shard-canvas
             ref = "shard-canvas-2"
             :canvas_no = "2"
             canvas_id = "front_blast"
@@ -55,7 +55,7 @@
             :shard_size = 3
             :plays_audio = false
             :use_custom_shards = false
-        /> -->
+        />
       <div id="tamp">
         <div class="tamp--positioner">
             <div class="circle-indicator circle-indicator-0">
@@ -107,26 +107,13 @@
             let canvas_offset = 100;
 
             let refs = this.$refs;
+            let bounds = {
+                x: 786,
+                y: 136
+            }
 
             // https://stackoverflow.com/questions/6348494/addeventlistener-vs-onclick
             glass_pane.addEventListener("click", function (e) {
-                // Increase clicks.
-                clicks++;
-
-                // https://pixabay.com/sound-effects/glass-bottle-shatter-13847/
-                // https://stackoverflow.com/questions/9419263/how-to-play-audio
-                let audioFile = "GlassCrack.mp3";
-                if (Math.floor(Math.random() * 100) === 0) {
-                    audioFile = "Poof.mp3";
-                }
-                let audio = new Audio(
-                    "src/assets/audio/" + audioFile
-                );
-                audio.volume = 0.4;
-                audio.play();
-                panes.forEach(function (pane) {
-                    pane.classList.add("cracked");
-                });
 
                 // The next bit is a mixture of these.
                 // https://www.codegrepper.com/code-examples/javascript/javascript+get+mouse+position+relative+to+element
@@ -136,101 +123,146 @@
                 let x = e.pageX - rect.left; //x position within the element.
                 let y = e.pageY - rect.top; //y position within the element.
 
-                // https://www.w3schools.com/js/js_htmldom_css.asp
-                let crack_rotation = Math.floor(Math.random() * 360);
+                let inBounds = 
+                    0 < x && 
+                    x < bounds.x &&
+                    0 < y && 
+                    y < bounds.y
+                ;
 
-                // ++++++++++__rulestring__++++++++++ //
-                // I have removed the rotations because they are horrifically un-performant.
+                let canvasRelPos = {
+                    x: 0,
+                    y: 0
+                }
 
-                let positioning_pixel_rule = "";
-                let plate_crack_rule = "";
-                let plate_crack_bg_positioner_rule = "";
+                if (inBounds) {
 
-                positioning_pixel_rule = ".positioning-pixel {";
-                positioning_pixel_rule += "left: " + x + "px !important;";
-                positioning_pixel_rule += "top: " + y + "px !important;";
-                // positioning_pixel_rule +=
-                //   "transform: rotate(" + crack_rotation + "deg) !important;";
-                positioning_pixel_rule += "}";
+                
+                    // Increase clicks.
+                    clicks++;
 
-                plate_crack_rule =
-                    ".positioning-pixel .nameplate, .positioning-pixel .faux-crack-bg {";
-                plate_crack_rule += "left: -" + x + "px !important;";
-                plate_crack_rule += "top: -" + y + "px !important;";
-                plate_crack_rule += "}";
-
-                // plate_crack_bg_positioner_rule =
-                //     ".positioning-pixel .nameplate-positioner, .positioning-pixel .faux-crack-bg-positioner {";
-                // plate_crack_bg_positioner_rule +=
-                //   "transform: rotate(-" + crack_rotation + "deg) !important;";
-                // plate_crack_bg_positioner_rule += "}";
-
-                // Okay, so I know this looks stupid, but hear me out.
-                // Because the styles are being overridden so often, and there are so many, repaint flickering can occur.
-                // To solve this, I am creating custom stylesheets in the dom.
-                // When one already exists, we create a new one beneath it, cascading to give it control over the styles.
-                // After this, we wait for a repaint of the browser window to make sure no flickering occurs.
-                // Then, after that repaint, we remove the old stylesheet.
-                // Sadly, this still only works MOST of the time. Users probably wont notice it.
-                // If you are reading this, you are probably not `Users`.
-                // If you are not `Users`, then I hope your day is going well!
-                // Sorry, I know this is bonkers.
-                // Also, if you meet a `User`, tell them to have a good day as well! Pass on some joy :D .
-
-                // Get the other style element index.
-                let other_style_element_index = (style_element_index + 1) % 2;
-                let other_style_element = document.querySelector(
-                    "style.click-styles-" + other_style_element_index
-                );
-
-                // Create a new stylesheet, and append it to the `head` element.
-                stylesheets["click_style_element_" + style_element_index] = document.createElement("style");
-                stylesheets["click_style_element_" + style_element_index].classList.add("click-styles-" + style_element_index);
-                document.head.appendChild(stylesheets["click_style_element_" + style_element_index]);
-
-                // Then, add the styles to the new dome element.
-                stylesheets["click_style_element_" + style_element_index].innerHTML = positioning_pixel_rule + plate_crack_rule + plate_crack_bg_positioner_rule;
-
-                // Then, wait for the next repaint...
-                // https://stackoverflow.com/questions/23253976/how-to-properly-wait-for-browser-reflow-repaint-to-finish
-                window.requestAnimationFrame(function () {
-                    // And then remove all old artifacts, resetting for the next click.
-                    if (other_style_element) {
-                        other_style_element.remove();
+                    // https://pixabay.com/sound-effects/glass-bottle-shatter-13847/
+                    // https://stackoverflow.com/questions/9419263/how-to-play-audio
+                    let audioFile = "GlassCrack.mp3";
+                    if (Math.floor(Math.random() * 100) === 0) {
+                        audioFile = "Poof.mp3";
                     }
-                    if (stylesheets["click_style_element_" + other_style_element_index]) {
-                        // https://www.w3schools.com/howto/howto_js_remove_property_object.asp
-                        delete stylesheets["click_style_element_" + other_style_element_index];
-                    }
-                    style_element_index = other_style_element_index;
-                });
+                    let audio = new Audio(
+                        "src/assets/audio/" + audioFile
+                    );
+                    audio.volume = 0.4;
+                    audio.play();
+                    panes.forEach(function (pane) {
+                        pane.classList.add("cracked");
+                    });
 
-                // ++++++++__end_rulestring__++++++++ //
+                    // https://www.w3schools.com/js/js_htmldom_css.asp
+                    let crack_rotation = Math.floor(Math.random() * 360);
 
-                // The canvas doesnt really have the same flickering problems that the rest of the styles do.
-                let glass_canvases = document.querySelectorAll(".glass-break-canvas canvas");
-                glass_canvases.forEach(function (glass_canvas, Cindex) {
-                    glass_canvas.classList.add("cracked");
-                    glass_canvas.style.left = e.pageX - canvas_dims.x / 2 + "px";
-                    glass_canvas.style.top = e.pageY - canvas_offset + "px";
+                    // ++++++++++__rulestring__++++++++++ //
+                    // I have removed the rotations because they are horrifically un-performant.
 
-                    if (Object.keys(refs)[Cindex]) {
-                        // console.log(refs[Object.keys(refs)[Cindex]])
-                        refs[Object.keys(refs)[Cindex]].makeShards(clicks, [x, y]);
-                    }
-                });
+                    let positioning_pixel_rule = "";
+                    let plate_crack_rule = "";
+                    let plate_crack_bg_positioner_rule = "";
 
-                let circle = document.querySelector("#tamp .tamp--positioner");
-                circle.classList.remove("display");
-                circle.style.left = e.pageX + "px";
-                circle.style.top = e.pageY + "px";
+                    positioning_pixel_rule = ".positioning-pixel {";
+                    positioning_pixel_rule += "left: " + x + "px !important;";
+                    positioning_pixel_rule += "top: " + y + "px !important;";
+                    // positioning_pixel_rule +=
+                    //   "transform: rotate(" + crack_rotation + "deg) !important;";
+                    positioning_pixel_rule += "}";
 
-                // Pretty neat trick to trigger reflow and trick browser in to restarting animation.
-                // https://css-tricks.com/restart-css-animation/#update-another-javascript-method-to-restart-a-css-animation
-                void circle.offsetWidth;
-                circle.classList.add("display");
+                    plate_crack_rule =
+                        ".positioning-pixel .nameplate, .positioning-pixel .faux-crack-bg {";
+                    plate_crack_rule += "left: -" + x + "px !important;";
+                    plate_crack_rule += "top: -" + y + "px !important;";
+                    plate_crack_rule += "}";
 
-                tampClassWait(clicks, circle);
+                    // plate_crack_bg_positioner_rule =
+                    //     ".positioning-pixel .nameplate-positioner, .positioning-pixel .faux-crack-bg-positioner {";
+                    // plate_crack_bg_positioner_rule +=
+                    //   "transform: rotate(-" + crack_rotation + "deg) !important;";
+                    // plate_crack_bg_positioner_rule += "}";
+
+                    // Okay, so I know this looks stupid, but hear me out.
+                    // Because the styles are being overridden so often, and there are so many, repaint flickering can occur.
+                    // To solve this, I am creating custom stylesheets in the dom.
+                    // When one already exists, we create a new one beneath it, cascading to give it control over the styles.
+                    // After this, we wait for a repaint of the browser window to make sure no flickering occurs.
+                    // Then, after that repaint, we remove the old stylesheet.
+                    // Sadly, this still only works MOST of the time. Users probably wont notice it.
+                    // If you are reading this, you are probably not `Users`.
+                    // If you are not `Users`, then I hope your day is going well!
+                    // Sorry, I know this is bonkers.
+                    // Also, if you meet a `User`, tell them to have a good day as well! Pass on some joy :D .
+
+                    // Get the other style element index.
+                    let other_style_element_index = (style_element_index + 1) % 2;
+                    let other_style_element = document.querySelector(
+                        "style.click-styles-" + other_style_element_index
+                    );
+
+                    // Create a new stylesheet, and append it to the `head` element.
+                    stylesheets["click_style_element_" + style_element_index] = document.createElement("style");
+                    stylesheets["click_style_element_" + style_element_index].classList.add("click-styles-" + style_element_index);
+                    document.head.appendChild(stylesheets["click_style_element_" + style_element_index]);
+
+                    // Then, add the styles to the new dome element.
+                    stylesheets["click_style_element_" + style_element_index].innerHTML = positioning_pixel_rule + plate_crack_rule + plate_crack_bg_positioner_rule;
+
+                    // Then, wait for the next repaint...
+                    // https://stackoverflow.com/questions/23253976/how-to-properly-wait-for-browser-reflow-repaint-to-finish
+                    window.requestAnimationFrame(function () {
+                        // And then remove all old artifacts, resetting for the next click.
+                        if (other_style_element) {
+                            other_style_element.remove();
+                        }
+                        if (stylesheets["click_style_element_" + other_style_element_index]) {
+                            // https://www.w3schools.com/howto/howto_js_remove_property_object.asp
+                            delete stylesheets["click_style_element_" + other_style_element_index];
+                        }
+                        style_element_index = other_style_element_index;
+                    });
+
+                    // ++++++++__end_rulestring__++++++++ //
+
+                    // The canvas doesnt really have the same flickering problems that the rest of the styles do.
+                    let glass_canvases = document.querySelectorAll(".glass-break-canvas canvas");
+                    glass_canvases.forEach(function (glass_canvas, Cindex) {
+                        glass_canvas.classList.add("cracked");
+
+                        // We store these positions so that we can pass them later to the shard canvas.
+                        let canvasPosX = e.pageX - canvas_dims.x / 2;
+                        let canvasPosY = e.pageY - canvas_offset;
+                        glass_canvas.style.left = canvasPosX + "px";
+                        glass_canvas.style.top = canvasPosY + "px";
+                        canvasRelPos.x = canvasPosX - glass_pane.getBoundingClientRect().x;
+                        canvasRelPos.y = canvasPosY - glass_pane.getBoundingClientRect().y;
+
+                        if (Object.keys(refs)[Cindex]) {
+                            // console.log(refs[Object.keys(refs)[Cindex]])
+                            refs[Object.keys(refs)[Cindex]].makeShards(
+                                clicks,
+                                [x, y],
+                                canvasRelPos,
+                                glass_pane.getBoundingClientRect()
+                            );
+                        }
+                    });
+
+                    let circle = document.querySelector("#tamp .tamp--positioner");
+                    circle.classList.remove("display");
+                    circle.style.left = e.pageX + "px";
+                    circle.style.top = e.pageY + "px";
+
+                    // Pretty neat trick to trigger reflow and trick browser in to restarting animation.
+                    // https://css-tricks.com/restart-css-animation/#update-another-javascript-method-to-restart-a-css-animation
+                    void circle.offsetWidth;
+                    circle.classList.add("display");
+
+                    tampClassWait(clicks, circle);
+                }
             });
 
             // This basically checks to see if there have been more clicks since this function was called, and if not, do cleanup.
