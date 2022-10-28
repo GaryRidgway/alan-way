@@ -20,22 +20,13 @@
             }
         },
         mounted() {
-            /* ######### P5 stuff ######### */
             let shardCounter = 0;
+            let chaffMultiplier = 3.5;
 
             let style_rules = getComputedStyle(document.body);
             let $props = this.$props;
             let $data = this.$data;
             let glass_color = style_rules.getPropertyValue("--clear-glass-light");
-            let chaffSize = 3;
-            let chaffMultiplier = 3.5;
-            let variance = 20;
-            // Max preset horizontal velocity.
-            let MPH_velocity = 4;
-            // Max preset horizontal velocity.
-            let MPV_velocity = 10;
-            let g_acceleration = 0.6;
-            let maxVelocity = 9.8;
             // let crack_offset = {
             //     x: -8,
             //     y: -9
@@ -76,6 +67,7 @@
                 let paneHeight = 325;
                 
                 sketch.clicks = 0;
+                sketch.chaffSize = 3;
                 sketch.triggerMakeShards = false;
                 sketch.mousePos = [];
                 sketch.mouseYPos = 0;
@@ -103,7 +95,6 @@
                         sketch.makeShards()
                         sketch.triggerMakeShards = false;
                     }
-                    // return;
 
                     if(groundAudioTriggers > 0 && groundAudioHasPlayed != true && plays_audio) {
                         // Make sure the user has clicked the dom and is intending to interact with the element that makes this sound.
@@ -182,6 +173,7 @@
 
             function shardsCreate(shard_cnt, shard_size, lowerBound, customShards = null, shardsClipAxisOffset = null,  paneHeight = null) {
                 let shards = [];
+                let chaff = $data.canvasedSketch.chaffSize >= shard_size;
                 if (customShards !== null) {
                     for (let i = 0; i < customShards.length; i++) {
                         let adjShard = [];
@@ -199,37 +191,45 @@
                                 posY,
                                 100,
                                 lowerBound,
-                                adjShard,
-                                shardsClipAxisOffset,
-                                paneHeight
+                                adjShard
                             )
                         );
                     }
                 }
                 else {
-                    for (let i = 0; i < shard_cnt; i++) {
-                        let ranposX = Math.floor(Math.random() * 50) - 25;
-                        let ranposY = Math.floor(Math.random() * 50) - 50;
-                        shards.push(
-                            new Shard(
-                                canvas_dims.x / 2 + ranposX - 10,
-                                canvas_offset + ranposY,
-                                shard_size,
-                                lowerBound
-                            )
-                        );
+                    if(!chaff) {
+                        for (let i = 0; i < shard_cnt; i++) {
+                            let ranposX = Math.floor(Math.random() * 50) - 25;
+                            let ranposY = Math.floor(Math.random() * 50) - 50;
+                            shards.push(
+                                new Shard(
+                                    canvas_dims.x / 2 + ranposX - 10,
+                                    canvas_offset + ranposY,
+                                    shard_size,
+                                    lowerBound
+                                )
+                            );
+                        }
                     }
                     for (let i = 0; i < shard_cnt * chaffMultiplier; i++) {
                         let ranposX = Math.floor(Math.random() * 50) - 25;
                         let ranposY = Math.floor(Math.random() * 50) - 50;
-                        shards.push(
-                            new Shard(
-                                canvas_dims.x / 2 + ranposX - 10,
-                                canvas_offset + ranposY,
-                                null,
-                                lowerBound
-                            )
-                        );
+                        let chaffX = canvas_dims.x / 2 + ranposX - 10;
+                        let chaffY = canvas_offset + ranposY;
+                        let trueChaffPos = adjustPoint([0, 0], {x:chaffX, y:chaffY});
+                        let inBounds = isInBounds({x: 786, y: 136}, trueChaffPos);
+
+                        // Only generate chaff if it is in bounds.
+                        if(inBounds) {
+                            shards.push(
+                                new Shard(
+                                    chaffX,
+                                    chaffY,
+                                    null,
+                                    lowerBound
+                                )
+                            );
+                        }
                     }
                 }
 
@@ -238,24 +238,45 @@
 
             // https://www.w3schools.com/js/js_object_constructors.asp
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects
-            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, clipAxisOffset = null, paneHeight = null, panePoly = false) {
+            function Shard(iPosX, iPosY, size, lowerBound, customVertices = null, panePoly = false) {
                 
                 // Variables.
+                let chaffSize = 3;
+                let variance = 20;
+                // Max preset horizontal velocity.
+                let MPH_velocity = 4;
+                // Max preset horizontal velocity.
+                let MPV_velocity = 0.6;
+                let g_acceleration = 0.2;
+                let maxVelocity = 9.8;
                 this.pos = {
                     x: iPosX,
                     y: iPosY
                 };
-                this.countDown = 0;
+                this.countDown = 50;
+
+                // This chooses a weighted selection for the shards of glass and increses their countdown based on it.
+                if (this.countDown > 0) {
+                    let weights = [
+                        1,
+                        2, 2, 2, 2, 
+                    ];
+                    let weightedSelection = Math.floor(Math.random() * weights.length)
+                    this.countDown += Math.floor(Math.random() * 15 * weights[weightedSelection]);
+                }
 
                 this.id = shardCounter;
                 shardCounter++;
                 this.vertices = [];
-                this.edges = []
+                this.edges = [];
 
                 this.hasCustomVertices = customVertices !== null ? true : false;
 
                 this.chaff = true;
                 if (size !== null && size > chaffSize) {
+                    this.chaff = false;
+                }
+                else if (size === null) {
                     this.chaff = false;
                 }
 
@@ -342,15 +363,22 @@
 
                     if(this.hasCustomVertices) {
                         relativeVertices[0].forEach(function(vertex) {
-                            let RtoPaneVertexPos = {
-                                x: $data.canvasedSketch.canvasRelPos.x + localPos.x + vertex[0],
-                                y: $data.canvasedSketch.canvasRelPos.y + localPos.y + vertex[1],
-                            }
+                            let RtoPaneVertexPos = adjustPoint(vertex, localPos);
                             trueVertices.push([RtoPaneVertexPos.x, RtoPaneVertexPos.y]);
                         });
 
                         return trueVertices;
                     }
+
+                    else if (this.chaff) {
+                        relativeVertices[0].forEach(function(vertex) {
+                            let RtoPaneVertexPos = adjustPoint(vertex, localPos);
+                            trueVertices.push([RtoPaneVertexPos.x, RtoPaneVertexPos.y]);
+                        });
+
+                        return trueVertices;
+                    }
+
                     else if (panePoly) {
                         return relativeVertices[0];
                     }
@@ -383,7 +411,11 @@
                 }
 
                 this.makeEdges = function() {
-                    this.edges = []
+                    this.newEdges = []
+                    this.correctedVerts;
+                    if (panePoly) {
+
+                    }
 
                     for (let n = 0; n < this.truePosVerts().length; n++) {
                         let coord = {x: this.truePosVerts()[n][0], y:this.truePosVerts()[n][1]}
@@ -516,7 +548,6 @@
                     // DEBUG::SHOWS ROTATION CENTER.
                     // circle(0, 0, 10);
                     // sketch.rotate(this.rotation);
-                    // console.log(this.pos);
                     if (!this.hasCustomVertices) {
                         sketch.translate(
                             this.vertices[1][0] + this.pos.x + crack_offset.x,
@@ -539,9 +570,11 @@
                     sketch.pop();
                 };
                 
-                if (this.hasCustomVertices) {
+                if (this.hasCustomVertices || panePoly) {
                     this.makeEdges();
-                    this.vertices[0] = bindPolygon([786, 136], this, this.pos);
+                }
+                if (this.hasCustomVertices) {
+                    this.vertices[0] = bindPolygon([786, 136], this);
                 }
             }
 
@@ -551,7 +584,7 @@
             // The fingerprints of the below sources are all over this project, but this is the most relevant spot to list them.
             // https://math.libretexts.org/Courses/Monroe_Community_College/MTH_220_Discrete_Math/4%3A_Sets/4.3%3A_Unions_and_Intersections
             // https://gorillasun.de/blog/an-algorithm-for-polygon-intersections
-            function bindPolygon(bounds, InitialPolygon, InitialPolygonPos) {
+            function bindPolygon(bounds, InitialPolygon) {
                 let newPolygon = [];
                 let mousePos = $data.canvasedSketch.mousePos;
                 let boundsO = {
@@ -569,10 +602,26 @@
 
                 // If it is...
                 if (inBounds) {
-                    pane = new Shard(null, null, null, null, null, null, null, true);
+                    let currP = InitialPolygon;
+
+                    // This next portion checks if the entire poly is OOB.
+                    let somePolyInBounds = false;
+                    InitialPolygon.truePosVerts().forEach(function(vertex) {
+                        let vertexO = {
+                            x: vertex[0],
+                            y: vertex[1]
+                        };
+                        somePolyInBounds = somePolyInBounds || isInBounds(boundsO, vertexO);
+                    });
+
+                    // If it is, simply return an empty array.
+                    if (!somePolyInBounds) {
+                        return [];
+                    }
+
+                    pane = new Shard(null, null, null, null, null, true);
+                    let otherP = pane;
                     for (let n = 0; n < 1; n++) {
-                        let currP = InitialPolygon;
-                        let otherP = pane;
 
                         if(currP.id != otherP.id){
                             let check = currP.getIntersectionArea(otherP);
@@ -697,6 +746,13 @@
                     return intersect(this, otherLine)
                 }
             }
+
+            function adjustPoint(vertex, localPosition) {
+                return {
+                        x: $data.canvasedSketch.canvasRelPos.x + localPosition.x + vertex[0],
+                        y: $data.canvasedSketch.canvasRelPos.y + localPosition.y + vertex[1],
+                    }
+            }
         },
         methods: {
             makeShards(clicks, mousePos, canvasRelPos, paneRect) {
@@ -711,10 +767,7 @@
         }
     }
 
-    // let myCustomOffset = [-165, -215];
     let myCustomOffset = [27, -225];
-    // let myCustomOffset = [0, -225];
-
     let myCustomVertices = [
         [ 
             [363.2, 338.14], 
