@@ -1,10 +1,11 @@
 {
+  "license": "UNLICENSED",
   "name": "alan-way",
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "yarn run build --base=/alan-way && gh-pages -d dist"
   },
   "dependencies": {
     "vue": "^3.0.0-rc.1"
