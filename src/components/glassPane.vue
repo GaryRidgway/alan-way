@@ -33,16 +33,16 @@
                   </h1>
                 </div>
               </div>
-              <img class="crack-5 center" src="src/assets/images/glasscrackINV2.png" />
+              <img class="crack-5 center" src="/src/assets/images/glasscrackINV2.png" />
             </div>
-            <img class="crack-1" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-2" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-3" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-4" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-6" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-7" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-8" src="src/assets/images/glasscrackINV2.png" />
-            <img class="crack-9" src="src/assets/images/glasscrackINV2.png" />
+            <img class="crack-1" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-2" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-3" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-4" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-6" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-7" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-8" src="/src/assets/images/glasscrackINV2.png" />
+            <img class="crack-9" src="/src/assets/images/glasscrackINV2.png" />
           </div>
         </div>
       </div>
