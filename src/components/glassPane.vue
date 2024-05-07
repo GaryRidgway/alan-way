@@ -1,7 +1,7 @@
 <template>
     <div class="fullglass">
-        <shard-canvas
-            ref = "shard-canvas-1"
+        <shardcanvas
+            ref = "shardcanvas-1"
             :canvas_no = "1"
             canvas_id = "back_blast"
             :shard_cnt = 7
@@ -47,8 +47,8 @@
         </div>
       </div>
       
-      <shard-canvas
-            ref = "shard-canvas-2"
+      <shardcanvas
+            ref = "shardcanvas-2"
             :canvas_no = "2"
             canvas_id = "front_blast"
             :shard_cnt = 7
@@ -76,15 +76,15 @@
 </template>
 
 <script>
-    import shardCanvas from './shardCanvas.vue'
+    import shardcanvas from './shardcanvas.vue'
 
     export default {
-        name: 'glassPane',
+        name: 'glasspane',
         props: {
             text: String
         },
         components: {
-            shardCanvas,
+            shardcanvas,
         },
         data() {
             return {
@@ -96,6 +96,7 @@
             let panes = document.querySelectorAll(".glass-pane, .shadow-pane");
             let glass_pane = panes[1];
             let clicks = 0;
+            let tampWait = 1000;
 
             // Custom stylesheet creation
             let stylesheets = {};
@@ -273,7 +274,7 @@
                     if (click === clicks) {
                     circle.classList.remove("display");
                     }
-                }, 8000);
+                }, tampWait);
             }
         }
     }
@@ -290,7 +291,7 @@
         width: 100vw;
         height: 100vh;
 
-        div[id^="glassCanvas"] {
+        div[id^="glasscanvas"] {
             position: fixed;
             pointer-events: none;
             width: 100vw;

@@ -1,18 +1,18 @@
 <template>
-  <glassPane text="Alan Way"></glassPane>
+  <glasspane text="Alan Way"></glasspane>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-import glassPane from './components/glassPane.vue'
-import shardCanvas from './components/shardCanvas.vue'
+import helloworld from './components/helloworld.vue'
+import glasspane from './components/glasspane.vue'
+import shardcanvas from './components/shardcanvas.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld,
-    glassPane,
-    shardCanvas
+    helloworld,
+    glasspane,
+    shardcanvas
   }
 }
 </script>

@@ -1,10 +1,10 @@
 <template>
-    <div :id="'glassCanvas-' + canvas_no" class="glass-break-canvas"></div>
+    <div :id="'glasscanvas-' + canvas_no" class="glass-break-canvas"></div>
 </template>
 
 <script>
     export default {
-        name: 'shardCanvas',
+        name: 'shardcanvas',
         props: {
             canvas_no: Number,
             canvas_id: String,
@@ -50,7 +50,7 @@
             // Set up the canvas.
             this.canvasedSketch = new p5(function(sketch) {
                 let canvas_data_id = $props.canvas_id;
-                let canvas_data_parent = 'glassCanvas-' + $props.canvas_no;
+                let canvas_data_parent = 'glasscanvas-' + $props.canvas_no;
                 let canvas_data_shard_cnt = $props.shard_cnt;
                 let canvas_data_shard_size = $props.shard_size;
                 let fill_c = sketch.color(glass_color);
@@ -84,9 +84,9 @@
                 };
 
                 sketch.setup = function () {
-                    let glassCanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
-                    glassCanvas.id(canvas_data_id);
-                    glassCanvas.parent(canvas_data_parent);
+                    let glasscanvas = sketch.createCanvas(canvas_dims.x, canvas_dims.y);
+                    glasscanvas.id(canvas_data_id);
+                    glasscanvas.parent(canvas_data_parent);
                     canvasElement = document.querySelector("#" + canvas_data_parent + " .canvas");
                 };
 
@@ -953,7 +953,7 @@
 </script>
 
 <style lang="scss">
-    div[id^="glassCanvas"] {
+    div[id^="glasscanvas"] {
         position: fixed;
         pointer-events: none;
         width: 100vw;
